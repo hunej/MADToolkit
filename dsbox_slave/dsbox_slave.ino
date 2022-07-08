@@ -95,7 +95,7 @@ void loop()
       toPlay_tid = c_tmp;
     }
 
-    if (nowPlaying_tid == 0 || tid_priority[toPlay_tid] < tid_priority[nowPlaying_tid] || (toPlay_tid == 7 && nowPlaying_tid == 8)) // not playing or higher priority sended or grounded recovered
+    if (nowPlaying_tid == 0 || tid_priority[toPlay_tid] <= tid_priority[nowPlaying_tid] || toPlay_tid != nowPlaying_tid))// not playing or higher priority sended or grounded recovered
     {
       nowPlaying_tid = toPlay_tid;
       c = '0';
