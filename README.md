@@ -23,3 +23,4 @@ User can use master board alone without slave board if mp3 playback function is 
 4. code optimization, add comment, indent correction
 5. add pin info documents
 6. add ENABLE_SLAVE_BOARD mode flag for master board used alone
+7. magic number elimination
