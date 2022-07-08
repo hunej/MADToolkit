@@ -1,11 +1,3 @@
-/*
- * https://forum.arduino.cc/t/how-to-take-int-value-from-i2c-communicaton/587608/3
-時間：2018/05/24
-作者：黑修斯(陳建仲)
-版本v1.01
-程式名稱：I2C測試程式---用於兩個arduino溝通---單方面回傳hello
-說明：說明：I2C從端的程式設定
-*/
 #include <Wire.h>
 #define led 13
 
