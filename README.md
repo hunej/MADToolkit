@@ -26,3 +26,4 @@ User can use master board alone without slave board if mp3 playback function is 
 7. magic number elimination
 8. photoresistor threshold tuning
 9. demo box installation tutorial
+10. 11.1v lipo for two arduino uno board powerining issue
