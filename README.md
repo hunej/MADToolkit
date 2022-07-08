@@ -24,3 +24,5 @@ User can use master board alone without slave board if mp3 playback function is 
 5. add pin info documents
 6. add ENABLE_SLAVE_BOARD mode flag for master board used alone
 7. magic number elimination
+8. photoresistor threshold tuning
+9. demo box installation tutorial
