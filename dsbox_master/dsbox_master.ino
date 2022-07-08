@@ -69,6 +69,8 @@ int bravo_near = 0;
 
 TM1637 tm1637(CLK, DIO);
 
+#define START_PLAYBACK_DELAY 5000 //manual set this is a bad idea tbh :(
+
 void setup()
 {
   int idx_TimeDisp;
@@ -89,7 +91,7 @@ void setup()
   tm1637.display(TimeDisp);
 
   Wire.begin();              // I2C master
-  Timer1.initialize(500000); // 1s
+  Timer1.initialize(500000); // 0.5s
   Timer1.attachInterrupt(TimingISR);
 
   SPI.begin(); // SPI
@@ -99,7 +101,7 @@ void setup()
   mfrc522.PCD_DumpVersionToSerial();
 
   hint_playback(START, 0);
-  delay(5000); // fucking magic number
+  delay(START_PLAYBACK_DELAY); // almost a fucking magic number
 
   irrecv.enableIRIn(); // Start the receiver
 
