@@ -1,12 +1,4 @@
-/* 
-時間：2018/05/24 
-作者：黑修斯(陳建仲) 
-版本v1 
-程式名稱：I2C測試程式---用於兩個arduino溝通---單方面回傳hello 
-說明：I2C主端的程式設定 
-*/ 
-#include <Wire.h> //插入I2C函式庫<Wire> 
-
+#include <Wire.h>
 #include <MFRC522.h>
 #include <IRremote.h>
 
@@ -18,8 +10,8 @@ int ir_result;
 int ir_timer;
 
 #define RST_PIN         8         //MFRC522 RST 
-#define SS_PIN          10  //MFRC522 就是模組上的SDA接腳
-MFRC522 mfrc522;   // 建立MFRC522實體
+#define SS_PIN          10  //MFRC522 SDA
+MFRC522 mfrc522;
 
 #include <TimerOne.h>
 #include "TM1637.h"
@@ -41,8 +33,8 @@ enum PLAYBACK_MODE
 #define ON 1
 #define OFF 0
 
-#define CLK 5              //數碼管  CLK 接 Arduino pin 3
-#define DIO 4              //數碼管  DIO 接 Arduino pin 2
+#define CLK 5              //CLK
+#define DIO 4              //DIO
 
 #define RFID_MOUNT 10
 #define RFID_ALPHA 51
@@ -96,15 +88,15 @@ pinMode(9,OUTPUT);
   tm1637.set();
   tm1637.init(); 
 
-Wire.begin(); //I2C位址與連線設定，主端不用設 
+Wire.begin(); //I2C master
 Timer1.initialize(500000);//1s
 Timer1.attachInterrupt(TimingISR);
 
-  SPI.begin();        // 初始化SPI介面
-  mfrc522.PCD_Init(SS_PIN, RST_PIN); // 初始化MFRC522卡
+  SPI.begin();        //SPI
+  mfrc522.PCD_Init(SS_PIN, RST_PIN); 
   Serial.print(F("Reader "));
   Serial.print(F(": "));
-  mfrc522.PCD_DumpVersionToSerial(); // 顯示讀卡設備的版本
+  mfrc522.PCD_DumpVersionToSerial(); 
 
 
   hint_playback(START, 0);
@@ -542,7 +534,7 @@ switch(input) {
   return mapped;
   }
 /**
- * 這個副程式把讀取到的UID，用16進位顯示出來
+ * UID serial print
  */
 void dump_byte_array(byte *buffer, byte bufferSize) {
   for (byte i = 0; i < bufferSize; i++) {
