@@ -24,7 +24,9 @@ User can use master board alone without slave board if MP3 playback function is 
 2. add pin info documents
 3. code optimization, add comment, indent correction
 4. add rgb led light module
-5. add ENABLE_SLAVE_BOARD mode flag for master board used alone
-6. magic number elimination
-7. demo box installation tutorial
-8. 11.1v lipo for two arduino uno board powerining issue
+5. change Photoresistor to PING Sensor
+6. add ENABLE_SLAVE_BOARD mode flag for master board used alone
+7. magic number elimination
+8. demo box installation tutorial
+9. 11.1v lipo for two Arduino Uno board powerining issue
+10. single Arduino Mega + DFPlayer w/ internal speaker demobox implementation
