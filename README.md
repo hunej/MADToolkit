@@ -23,7 +23,8 @@ User can use master board alone without slave board if MP3 playback function is 
 1. mp3 audio content rework, add coffin dance music
 2. add pin info documents
 3. code optimization, add comment, indent correction
-4. add ENABLE_SLAVE_BOARD mode flag for master board used alone
-5. magic number elimination
-6. demo box installation tutorial
-7. 11.1v lipo for two arduino uno board powerining issue
+4. add rgb led light module
+5. add ENABLE_SLAVE_BOARD mode flag for master board used alone
+6. magic number elimination
+7. demo box installation tutorial
+8. 11.1v lipo for two arduino uno board powerining issue
