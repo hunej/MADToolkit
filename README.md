@@ -24,7 +24,6 @@ User can use master board alone without slave board if MP3 playback function is 
 
 
 ## Updates 
-
 ### 2022/07/08
 * First Commit
 * Add a Potentiometer for Photoresistor threshold controlling
@@ -44,4 +43,5 @@ User can use master board alone without slave board if MP3 playback function is 
 * magic number elimination
 * demo box installation tutorial
 * 11.1v lipo for two Arduino Uno board powerining issue
-* single Arduino Mega + DFPlayer w/ internal speaker demobox implementation
+* single Arduino Mega ver, w/ DFPlayer mp3 codec and internal speaker demobox implementation
+* single Arduino Nano ver, w/o audio playback demobox implementation
