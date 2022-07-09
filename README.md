@@ -3,11 +3,24 @@
 ## Summary
 This repository contains the Arduino code which can can be built as a dartsoft or airsoft task props box. Two Arduino Uno Board are used as master board and slave board,  which are communicated via I2C. 
 
-The master board needs some peripherals such as LED Display(TM1637), Internal Timer(Firmware Interrupt), RFID Sensor(RC522), Buzzer with Internal Oscillator, Photoresistor, IR Remote Control, Potentiometer(B10k).
+The master board needs some peripherals such as LED Display(TM1637), Internal Timer(Firmware Interrupt), RFID Sensor(RC522), Active Piezo Buzzer, Photoresistor, IR Remote Control, Potentiometer(B10k).
 
 The audio playback event is sent via I2C to trigger slave board's MP3 audio decoder(VS1053B). An AUX line and external speaker is needed. 
 
 User can use master board alone without slave board if MP3 playback function is not required.
+
+## Library
+### Duo-Uno Master
+* IRremote by shirriff
+* TimerOne.h
+* TM1637.h
+* MFRC522
+
+### Duo-Uno Slave
+* SdFat_exFat by Bill Greiman
+* vs1053_sdFat by mpflaga
+
+
 
 
 ## Updates 
@@ -19,10 +32,11 @@ User can use master board alone without slave board if MP3 playback function is 
 * File path correction
 * Timer input refinement
 * add external reset button to trigger reset pin
+### 2022/07/09
+* add pin information
 
 ## TODO : 
 * mp3 audio content rework, add coffin dance music
-* add pin info documents
 * code optimization, add comment, indent correction
 * add rgb led light module
 * change Photoresistor to PING Sensor

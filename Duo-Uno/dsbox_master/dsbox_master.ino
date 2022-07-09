@@ -2,7 +2,7 @@
 #include <MFRC522.h>
 #include <IRremote.h>
 
-int RECV_PIN = 2;
+int RECV_PIN = 2;//IR
 
 IRrecv irrecv(RECV_PIN);
 decode_results results;
@@ -10,7 +10,7 @@ int ir_result;
 int ir_timer;
 
 #define RST_PIN 8 // MFRC522 RST
-#define SS_PIN 10 // MFRC522 SDA
+#define SS_PIN 10 // MFRC522 SDA/SS
 MFRC522 mfrc522;
 
 #include <TimerOne.h>
@@ -32,8 +32,8 @@ enum PLAYBACK_MODE
 #define ON 1
 #define OFF 0
 
-#define CLK 5 // CLK
-#define DIO 4 // DIO
+#define CLK 5 // TM1637 CLK
+#define DIO 4 // TM1637 DIO
 
 #define RFID_MOUNT 10
 #define RFID_ALPHA 51
