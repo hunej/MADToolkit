@@ -18,10 +18,10 @@ User can use master board alone without slave board if MP3 playback function is 
 * Add mounting stage timer compensation
 * File path correction
 * Timer input refinement
+* add external reset button to trigger reset pin
 
 ## TODO : 
 * mp3 audio content rework, add coffin dance music
-* external reset button
 * add pin info documents
 * code optimization, add comment, indent correction
 * add rgb led light module
