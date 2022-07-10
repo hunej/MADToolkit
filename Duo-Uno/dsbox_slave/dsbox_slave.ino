@@ -58,7 +58,7 @@ void setup()
       ;
   }
   MP3player.begin();
-  MP3player.setVolume(40, 40); //(Left, Right) 40 is pretty good for ear buds
+  MP3player.setVolume(0, 0); //(Left, Right) 40 is pretty good for ear buds
 
   //  MP3player.playMP3(t0001);
 
