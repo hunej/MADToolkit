@@ -15,12 +15,15 @@ User can use master board alone without slave board if MP3 playback function is 
 * TimerOne.h
 * TM1637.h
 * MFRC522
-
 ### Duo-Uno Slave
 * SdFat_exFat by Bill Greiman
 * vs1053_sdFat by mpflaga
 
+### Mega
+* TODO...
 
+### Nano
+* TODO...
 
 
 ## Updates 
