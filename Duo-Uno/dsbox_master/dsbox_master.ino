@@ -32,8 +32,12 @@ enum PLAYBACK_MODE
 #define ON 1
 #define OFF 0
 
-#define CLK 5 // TM1637 CLK
+#define CLK 7 // TM1637 CLK
 #define DIO 4 // TM1637 DIO
+
+#define Red  6//PWM PIN
+#define Green  5//PWM PIN
+#define Blue  3//PWM PIN
 
 #define RFID_MOUNT 10
 #define RFID_ALPHA 51
@@ -69,7 +73,7 @@ int bravo_near = 0;
 
 TM1637 tm1637(CLK, DIO);
 
-#define START_PLAYBACK_DELAY 5000 //manual set this is a bad idea tbh :(
+#define START_PLAYBACK_DELAY 12000 //manual set this is a bad idea tbh :(
 
 void setup()
 {
@@ -78,7 +82,20 @@ void setup()
 
   Serial.println("Milsig Dartsoft Arduino Toolkit");
 
-  pinMode(9, OUTPUT);
+  pinMode(9, OUTPUT);//BUZZER
+  
+  pinMode(Red, OUTPUT);
+  pinMode(Green, OUTPUT);
+  pinMode(Blue, OUTPUT);
+
+
+  //white light: 255, 255, 255
+  //no light: 0, 0, 0
+  analogWrite(Red,255);
+  analogWrite(Green,255);
+  analogWrite(Blue,255);
+
+  
   //  digitalWrite(9,HIGH);
   //  delay(1000);
   //  digitalWrite(9,LOW);
@@ -198,8 +215,17 @@ void beep_short(int count)
 {
   while (count--)
   {
+    analogWrite(Red,255);
+    analogWrite(Green,0);
+    analogWrite(Blue,0);    
+    
     digitalWrite(9, HIGH);
     delay(100);
+
+    analogWrite(Red,0);
+    analogWrite(Green,0);
+    analogWrite(Blue,0); 
+       
     digitalWrite(9, LOW);
     delay(100);
   }
@@ -207,10 +233,18 @@ void beep_short(int count)
 }
 void beep_long(int duration)
 {
-
+  analogWrite(Red,255);
+  analogWrite(Green,0);
+  analogWrite(Blue,0);
+  
   digitalWrite(9, HIGH);
   delay(duration * 1000);
   digitalWrite(9, LOW);
+  
+  analogWrite(Red,0);
+  analogWrite(Green,0);
+  analogWrite(Blue,0);  
+  
   delay(100);
 }
 
@@ -413,9 +447,19 @@ void TimingISR()
 
   beeptoggle = (~beeptoggle);
   if (beeptoggle)
+  {
     digitalWrite(9, HIGH);
+    analogWrite(Red,255);
+    analogWrite(Green,0);
+    analogWrite(Blue,0);
+  }
   else
+  {
     digitalWrite(9, LOW);
+    analogWrite(Red,0);
+    analogWrite(Green,0);
+    analogWrite(Blue,0);    
+  }
 
   Update = ON;
 
@@ -540,15 +584,15 @@ int ir_input_mapping(int input)
   case 67:
     mapped = 6;
     break;
-  case 7:
-    mapped = 7;
-    break;
-  case 21:
-    mapped = 8;
-    break;
-  case 9:
-    mapped = 9;
-    break;
+//  case 7:
+//    mapped = 7;
+//    break;
+//  case 21:
+//    mapped = 8;
+//    break;
+//  case 9:
+//    mapped = 9;
+//    break;
   default:
     mapped = -1;
   }
