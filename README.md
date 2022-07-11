@@ -22,6 +22,12 @@ TODO...
 ### Nano/Single-Uno: Single Arduino Nano/Uno Board
 TODO...
 
+### iOS APP
+TODO...
+
+### Android APP
+TODO...
+
 ## Getting Started
 TODO...
 
@@ -41,6 +47,11 @@ TODO...
 ### Nano
 * TODO...
 
+### iOS APP
+TODO...
+
+### Android APP
+TODO...
 
 ## Updates
 ### 2022/07/08
@@ -60,6 +71,9 @@ TODO...
 
 
 ## TODO
+* domination game mode implememtation
+* destruction/domination game mode implementation
+* change timer beep pattern when time is running out
 * STOP-CMD function implementation for I2C mp3 playback
 * skippable instruction audios
 * code optimization, add comment, indent correction
@@ -70,7 +84,7 @@ TODO...
 * 11.1v lipo for two Arduino Uno board powerining issue
 * single Arduino Mega board ver demobox implementation, w/ DFPlayer mp3 codec and internal speaker
 * single Arduino Nano/Uno board ver demobox implementation, w/o audio playback, Photoresistor, Potentiometer, RFID sensor, IR remote control, RGB light module
-
+* iOS/Android APP implementation
 
 ## Community
 * TODO...
