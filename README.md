@@ -71,8 +71,9 @@ TODO...
 
 
 ## TODO
+* library dependency link correction
 * domination game mode implememtation
-* destruction/domination game mode implementation
+* destruction/domination game mode integrated implementation
 * change timer beep pattern when time is running out
 * STOP-CMD function implementation for I2C mp3 playback
 * skippable instruction audios
@@ -85,6 +86,7 @@ TODO...
 * single Arduino Mega board ver demobox implementation, w/ DFPlayer mp3 codec and internal speaker
 * single Arduino Nano/Uno board ver demobox implementation, w/o audio playback, Photoresistor, Potentiometer, RFID sensor, IR remote control, RGB light module
 * iOS/Android APP implementation
+* add Amazon link for component price reference
 
 ## Community
 * TODO...
