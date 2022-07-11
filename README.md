@@ -33,13 +33,13 @@ TODO...
 
 ## Library Dependency
 ### Duo-Uno Master
-* IRremote by shirriff
-* TimerOne.h
-* TM1637.h
-* MFRC522
+* IRremote by Armin Joachimsmeyer
+* TimerOne by Paul Stoffregen
+* Grove 4-Digital Display by Seeed Studio
+* MFRC522 by GithubCommunity
 ### Duo-Uno Slave
 * SdFat_exFat by Bill Greiman
-* vs1053_sdFat by mpflaga
+* VS1053 for use with SdFat by Michael P. Flaga
 
 ### Mega
 * TODO...
@@ -68,15 +68,14 @@ TODO...
 * add rgb led light module
 * remove button 7~9's functionality on IR controller
 * mp3 audio content rework, add coffin dance music
-
+* library dependency link correction
 
 ## TODO
-* library dependency link correction
+* skippable instruction audios
 * domination game mode implememtation
 * destruction/domination game mode integrated implementation
 * change timer beep pattern when time is running out
 * STOP-CMD function implementation for I2C mp3 playback
-* skippable instruction audios
 * code optimization, add comment, indent correction
 * ~exchangeable Photoresistor/PING sensor API (deprecated)~
 * ~add ENABLE_SLAVE_BOARD mode flag for master board used alone (deprecated)~
