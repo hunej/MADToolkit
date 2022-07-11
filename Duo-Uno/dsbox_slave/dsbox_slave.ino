@@ -15,7 +15,8 @@ char t0005[] = "0005_MOUNTING_BOMB_SIREN.mp3";
 char t0006[] = "0006_BOMB_MOUNTED_SIREN.mp3";
 char t0007[] = "0007_TIKTOK_XX.mp3";
 char t0008[] = "0008_GROUNDED_SIREN.mp3";
-char t0009[] = "0009_WELCOME";
+char t0009[] = "0009_WELCOME.mp3";
+char t0010[] = "0010_LOGO.mp3";
 
 const char *flist[20];
 int tid_priority[] = {-1, 0, 0, 0, 0, 2, 3, 5, 5, 0};
@@ -45,7 +46,8 @@ void setup()
   flist[7] = t0007;
   flist[8] = t0008;
   flist[9] = t0009;
-
+  flist[10] = t0010;
+  
   Wire.begin(3);                // I2C位址與連線設定，這裡設定為3號
   Wire.onReceive(receiveEvent); //當收到I2C訊號時，啟動的動作
   Serial.begin(115200);         // Serial輸出鮑率為9600
@@ -60,7 +62,7 @@ void setup()
   MP3player.begin();
   MP3player.setVolume(0, 0); //(Left, Right) 40 is pretty good for ear buds
 
-  //  MP3player.playMP3(t0001);
+  MP3player.playMP3(t0010);
 
   ////  while(MP3player.getState() == 5);
   //  delay(5000);
@@ -73,6 +75,8 @@ void loop()
   while (1)
   {
     Serial.println(c);
+    if(c == 's')
+      MP3player.stopTrack();
     c_tmp = c - 48;
     Serial.println(c_tmp);
     if (c_tmp < 1 || c_tmp > 20) // pass if no valid i2c msg got
