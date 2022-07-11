@@ -3,7 +3,7 @@
 ## Summary
 This repository contains the Milsig Arduino DartSoft Development Kit, which can can be built as a dartsoft or airsoft task props box. 
 
-###There are three versions of MADSDK: 
+### There are three versions of MADSDK: 
 * Duo-Uno: Two Arduino Uno Board are used as master board and slave board, which are communicated via I2C
 * Mega: Single Arduino Mega Board with full functionality
 * Nano/Single-Uno: Single Arduino Nano/Uno Board with limited functionality
@@ -22,8 +22,10 @@ TODO...
 ### Nano/Single-Uno: Single Arduino Nano/Uno Board
 TODO...
 
+## Getting Started
+TODO...
 
-## Library
+## Library Dependency
 ### Duo-Uno Master
 * IRremote by shirriff
 * TimerOne.h
@@ -40,7 +42,7 @@ TODO...
 * TODO...
 
 
-## Updates 
+## Updates
 ### 2022/07/08
 * First Commit
 * Add a Potentiometer for Photoresistor threshold controlling
@@ -57,14 +59,21 @@ TODO...
 * mp3 audio content rework, add coffin dance music
 
 
-## TODO : 
+## TODO
 * STOP-CMD function implementation for I2C mp3 playback
 * skippable instruction audios
 * code optimization, add comment, indent correction
-* change Photoresistor to PING Sensor
-* add ENABLE_SLAVE_BOARD mode flag for master board used alone
+* ~exchangeable Photoresistor/PING sensor API (deprecated)~
+* ~add ENABLE_SLAVE_BOARD mode flag for master board used alone (deprecated)~
 * magic number elimination
-* demo box installation tutorial
+* getting started user guide & demo box installation tutorial videos
 * 11.1v lipo for two Arduino Uno board powerining issue
-* Single Arduino Mega Board ver, w/ DFPlayer mp3 codec and internal speaker demobox implementation
-* Single Arduino Nano/Uno Board ver, w/o audio playback demobox implementation
+* single Arduino Mega board ver demobox implementation, w/ DFPlayer mp3 codec and internal speaker
+* single Arduino Nano/Uno board ver demobox implementation, w/o audio playback, Photoresistor, Potentiometer, RFID sensor, IR remote control, RGB light module
+
+
+## Community
+* TODO...
+
+## Contributing
+* We use GitHub issues to tracking issue requests and bugfix. If you encounter any bug or have any ideas, please create new issues on this repository
