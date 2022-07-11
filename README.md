@@ -1,13 +1,27 @@
-# Milsig Dartsoft Arduino Toolkit
+# MADSDK: Milsig Arduino DartSoft Development Kit
 
 ## Summary
-This repository contains the Arduino code which can can be built as a dartsoft or airsoft task props box. Two Arduino Uno Board are used as master board and slave board,  which are communicated via I2C. 
+This repository contains the Milsig Arduino DartSoft Development Kit, which can can be built as a dartsoft or airsoft task props box. 
 
-The master board needs some peripherals such as LED Display(TM1637), Internal Timer(Firmware Interrupt), RFID Sensor(RC522), Active Piezo Buzzer, RGB Led Light Module, Photoresistor, IR Remote Control, Potentiometer(B10k).
+###There are three versions of MADSDK: 
+* Duo-Uno: Two Arduino Uno Board are used as master board and slave board, which are communicated via I2C
+* Mega: Single Arduino Mega Board with full functionality
+* Nano/Single-Uno: Single Arduino Nano/Uno Board with limited functionality
+
+## Description
+### Duo-Uno: Two Arduino Uno Board
+The master board uses firmware interrupt for internal timer to trigger events. It also needs some peripherals such as LED Display(TM1637), Active Piezo Buzzer, RFID Sensor(RC522 for card sensing, optional), IR Remote Control(for timer setup, optional), Photoresistor(Optional), Potentiometer(B10k for Photoresistor threshold controlling, optional), RGB Led Light Module(Optional).
 
 The audio playback event is sent via I2C to trigger slave board's MP3 audio decoder(VS1053B). An AUX line and external speaker is needed. 
 
-User can use master board alone without slave board if MP3 playback function is not required.
+User can use master board alone without slave board if MP3 playback function is not required. There are lots of unused pins on slave board can be used as custom function implementation.
+
+### Mega: Single Arduino Mega Board
+TODO...
+
+### Nano/Single-Uno: Single Arduino Nano/Uno Board
+TODO...
+
 
 ## Library
 ### Duo-Uno Master
@@ -44,11 +58,13 @@ User can use master board alone without slave board if MP3 playback function is 
 
 
 ## TODO : 
+* STOP-CMD function implementation for I2C mp3 playback
+* skippable instruction audios
 * code optimization, add comment, indent correction
 * change Photoresistor to PING Sensor
 * add ENABLE_SLAVE_BOARD mode flag for master board used alone
 * magic number elimination
 * demo box installation tutorial
 * 11.1v lipo for two Arduino Uno board powerining issue
-* single Arduino Mega ver, w/ DFPlayer mp3 codec and internal speaker demobox implementation
-* single Arduino Nano ver, w/o audio playback demobox implementation
+* Single Arduino Mega Board ver, w/ DFPlayer mp3 codec and internal speaker demobox implementation
+* Single Arduino Nano/Uno Board ver, w/o audio playback demobox implementation
