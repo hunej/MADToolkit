@@ -68,6 +68,7 @@ TODO...
 * add rgb led light module
 * remove button 7~9's functionality on IR controller
 * mp3 audio content rework, add coffin dance music
+### 2022/07/12
 * library dependency link correction
 
 ## TODO
