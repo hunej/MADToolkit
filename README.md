@@ -1,4 +1,4 @@
-# MADSDK: Milsig Arduino DartSoft Development Kit
+# MADSDK: Milsig Airsoft & Dartsoft Software Development Kit
 
 ## Summary
 This repository contains the Milsig Arduino DartSoft Development Kit, which can can be built as a dartsoft or airsoft task props box. 
