@@ -1,7 +1,7 @@
-# MADSDK: Milsig Airsoft & Dartsoft Software Development Kit
+# MADSDK: MADNESS Airsoft & Dartsoft Software Development Kit
 
 ## Summary
-This repository contains the Milsig Airsoft & Dartsoft Software Development Kit, which can can be built as a dartsoft or airsoft task props box. 
+This repository contains the MADNESS Airsoft & Dartsoft Software Development Kit, which can can be built as a dartsoft or airsoft task props box. 
 
 ### There are three versions of MADSDK: 
 * Duo-Uno: Two Arduino Uno Board are used as master board and slave board, which are communicated via I2C
