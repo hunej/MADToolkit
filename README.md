@@ -72,6 +72,7 @@ TODO...
 * library dependency link correction
 ### 2022/07/29
 * https://github.com/dniklaus/arduino-display-lcdkeypad testing
+* https://github.com/fmalpartida/New-LiquidCrystal testing
 
 ## TODO
 * skippable instruction audios
