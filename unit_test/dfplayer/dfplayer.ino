@@ -4,7 +4,11 @@
 #include "SoftwareSerial.h"
 #include "DFRobotDFPlayerMini.h"
 
-SoftwareSerial mySoftwareSerial(7, 6); // RX, TX
+
+#define MP3_RX_PIN 6
+#define MP3_TX_PIN 7
+
+SoftwareSerial mySoftwareSerial(MP3_RX_PIN, MP3_TX_PIN); // RX, TX
 DFRobotDFPlayerMini myDFPlayer;
 void printDetail(uint8_t type, int value);
 
@@ -39,27 +43,29 @@ void setup()
   }
   Serial.println(F("DFPlayer Mini online."));
   
-  myDFPlayer.volume(30);  //Set volume value. From 0 to 30
-//  myDFPlayer.play(1);
+  myDFPlayer.volume(10);  //Set volume value. From 0 to 30
+  myDFPlayer.play(START);
+  delay(5000);
 }
 
 void loop()
 {
-  myDFPlayer.play(START);
-//  delay(50000);
-  while(1);
+//  myDFPlayer.play(START);
+////  delay(50000);
+//  while(1);
 
   
-//  static unsigned long timer = millis();
-//  
-//  if (millis() - timer > 3000) {
-//    timer = millis();
+  static unsigned long timer = millis();
+  
+  if (millis() - timer > 30000) {
+    timer = millis();
 //    myDFPlayer.next();  //Play next mp3 every 3 second.
-//  }
-//  
-//  if (myDFPlayer.available()) {
-//    printDetail(myDFPlayer.readType(), myDFPlayer.read()); //Print the detail message from DFPlayer to handle different errors and states.
-//  }
+    myDFPlayer.play(MOUNTING_BOMB_SIREN);
+  }
+  
+  if (myDFPlayer.available()) {
+    printDetail(myDFPlayer.readType(), myDFPlayer.read()); //Print the detail message from DFPlayer to handle different errors and states.
+  }
 }
 
 void printDetail(uint8_t type, int value){
