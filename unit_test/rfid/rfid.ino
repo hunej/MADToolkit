@@ -63,7 +63,7 @@ uint8_t control = 0x00;
 
 
 
-void loop1() {
+void loop() {
     bool cardRemoved = false;
     int counter = 0;
     bool current, previous;
