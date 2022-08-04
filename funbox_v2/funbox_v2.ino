@@ -6,15 +6,42 @@
 #include <TimerOne.h>
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
+#include <IRremote.h>
+#include "Arduino.h"
+#include "SoftwareSerial.h"
+#include "DFRobotDFPlayerMini.h"
+
 
 // Define
 #define RST_PIN 9 // Configurable, see typical pin layout above
-#define SS_PIN 10 // Configurable, see typical pin layout above
+#define SS_PIN 10 // Configurable, see typical pin layout above, aka SDA pin
 #define BUZZER_PIN 3
+#define MP3_RX_PIN 6
+#define MP3_TX_PIN 7
+#define RECV_PIN 2
+
+
+// Functions
+void printDetail(uint8_t type, int value);
+bool rfid_sensing(int stage);
+void TimingISR();
+void exp_mp3_handling(int sensing_time, int current_stage);
+void exp_lcd_judge(int exp_judge_mode);
+void exp_lcd_handling(int cntdwn, int sensing_t, int stage);
+bool cmp_stage_match(int stage, byte uid);
+void beep_short(int count);
+void beep_long(int duration);
+void mfrc522_fast_Reset();
+void dump_byte_array(byte *buffer, byte bufferSize);
+int ir_input_mapping(int input);
 
 // Global variables
 MFRC522 mfrc522(SS_PIN, RST_PIN);                              // Create MFRC522 instance
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); // LCD
+SoftwareSerial mySoftwareSerial(MP3_RX_PIN, MP3_TX_PIN); // RX, TX
+DFRobotDFPlayerMini myDFPlayer;
+IRrecv irrecv(RECV_PIN);
+decode_results results;//IR
 
 bool rfid_tag_present_prev = false;
 bool rfid_tag_present = false;
@@ -30,6 +57,10 @@ int beeptoggle = 0;
 int countdown = 0; // second
 int sensing_time = 0;
 int current_stage = 0;
+int ir_result;
+int ir_timer_setting;
+
+unsigned long mp3_timer;
 
 // Enum
 enum PLAY_MODE_STAGE
@@ -60,15 +91,30 @@ enum EXP_JUDGE_MODE
 
 enum PLAYBACK_MODE
 {
-  START = 8, // I set 0001_START.mp3 and fucking dont know why got 8 here
-  ALPHA_TEAM_LOSE_EXPLOSION = 7,
-  ALPHA_TEAM_WIN_EXPLOSION = 6,
-  BRAVO_TEAM_WIN = 5,
-  MOUNTING_BOMB_SIREN = 4,
-  BOMB_MOUNTED_SIREN = 3,
-  GROUNDED_SIREN = 1,
+  MP3_START = 8, // I set 0001_START.mp3 and fucking dont know why got 8 here
+  MP3_ALPHA_TEAM_LOSE_EXPLOSION = 7,
+  MP3_ALPHA_TEAM_WIN_EXPLOSION = 6,
+  MP3_BRAVO_TEAM_WIN = 5,
+  MP3_MOUNTING_BOMB_SIREN = 4,
+  MP3_UNMNTING_BOMB_SIREN = 999,
+  MP3_BOMB_MOUNTED_SIREN = 3,
+  MP3_GROUNDED_SIREN = 1,
 
 } playback;
+
+enum MP3_LENGTH
+{
+  MP3_START_LENGTH = 12000, // I set 0001_START.mp3 and fucking dont know why got 8 here
+  MP3_ALPHA_TEAM_LOSE_EXPLOSION_LENGTH = 11000,
+  MP3_ALPHA_TEAM_WIN_EXPLOSION_LENGTH = 9000,
+  MP3_BRAVO_TEAM_WIN_LENGTH = 4000,
+  MP3_MOUNTING_BOMB_SIREN_LENGTH = 3000,
+  MP3_UNMNTING_BOMB_SIREN_LENGTH = 9999,
+  MP3_BOMB_MOUNTED_SIREN_LENGTH = 7000,
+  MP3_GROUNDED_SIREN_LENGTH = 6000,
+
+} mp3len;
+
 
 enum RFID_CARD_UID
 {
@@ -90,7 +136,7 @@ void setup()
 
   // RFID
   mfrc522.PCD_Init(); // Init MFRC522
-
+  
   // LCD
   lcd.begin(16, 2);
   lcd.backlight();
@@ -105,12 +151,73 @@ void setup()
   pinMode(BUZZER_PIN, OUTPUT); // BUZZER
   beep_short(3);
 
+
+
+  // MP3
+  mySoftwareSerial.begin(9600);
+  Serial.println();
+  Serial.println(F("DFRobot DFPlayer Mini Demo"));
+  Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
+  
+  if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
+    Serial.println(F("Unable to begin:"));
+    Serial.println(F("1.Please recheck the connection!"));
+    Serial.println(F("2.Please insert the SD card!"));
+    while(true){
+      delay(0); // Code to compatible with ESP8266 watch dog.
+    }
+  }
+  Serial.println(F("DFPlayer Mini online."));
+  
+  myDFPlayer.volume(10);  //Set volume value. From 0 to 30
+  myDFPlayer.play(MP3_START);
+  delay(MP3_START_LENGTH);  
+  beep_short(3);
+
+
+  // IR
+  irrecv.enableIRIn(); // Start the receiver
+  ir_result = -2;
+  ir_timer_setting = 0;  
+  // receive countdown setting from ir controller
+  lcd.clear();
+  lcd.setCursor(0, 0);  
+  while (IrReceiver.decodedIRData.command != 0x1C) // 0x1C is OK button
+  {
+    if (IrReceiver.decode())
+    {
+      ir_result = IrReceiver.decodedIRData.command;
+      ir_result = ir_input_mapping(ir_result);
+
+      if (ir_result < 0)
+        continue;
+      else
+        beep_short(1);
+
+      ir_timer_setting = ir_timer_setting * 10 + ir_result;
+      lcd.clear();
+      lcd.setCursor(0, 0); 
+      lcd.print("COUNTDOWN: ");
+      lcd.print(ir_timer_setting);
+      lcd.print("s");
+
+
+      IrReceiver.resume();
+    }
+  }
+  beep_short(3);
+
+
+
+  
   // ISR
   Timer1.initialize(500000); // 0.5s
   Timer1.attachInterrupt(TimingISR);
 
   // Countdown
-  countdown = EXP_MODE_STAGE0_TIMING;
+  countdown = ir_timer_setting;//countdown = EXP_MODE_STAGE0_TIMING;
+
+  
 }
 
 // current_stage
@@ -123,10 +230,10 @@ void loop()
     Serial.println(countdown);
     Serial.print("current_stage: ");
     Serial.println(current_stage);
-
-    exp_lcd_handling(countdown, sensing_time, current_stage);
   }
-
+    exp_lcd_handling(countdown, sensing_time, current_stage);
+//    exp_mp3_handling(sensing_time, current_stage);
+    
   stage_ahead = rfid_sensing(current_stage);
 
   if (stage_ahead && current_stage == EXP_MODE_STAGE0)
@@ -145,10 +252,17 @@ void loop()
 
     mfrc522.PICC_HaltA();
 
+
+    mp3_timer = millis();
+    myDFPlayer.play(MP3_BOMB_MOUNTED_SIREN);
+      
     sensing_time = 0;
     current_stage++;
-    delay(1000);
+    delay(MP3_BOMB_MOUNTED_SIREN_LENGTH);
     countdown = EXP_MODE_STAGE1_TIMING;
+
+
+
   }
   else if (stage_ahead)
   {
@@ -167,6 +281,7 @@ void loop()
     //
     if (countdown <= 0)
     {
+      myDFPlayer.play(MP3_ALPHA_TEAM_LOSE_EXPLOSION);
       Serial.println("ALPHA LOSE");
       exp_lcd_judge(EXP_MODE_ALPHA_LOSE);
       //        delay(8000);
@@ -174,8 +289,16 @@ void loop()
     break;
   case EXP_MODE_STAGE1:
     // playback BOMB_MOUNTED_SIREN if mp3 idle
+    if(millis() - mp3_timer > 7000)
+    {
+        mp3_timer = millis();
+      myDFPlayer.play(MP3_BOMB_MOUNTED_SIREN);
+      }
+
+    
     if (countdown <= 0)
     {
+      myDFPlayer.play(MP3_ALPHA_TEAM_WIN_EXPLOSION);
       Serial.println("ALPHA WIN");
       exp_lcd_judge(EXP_MODE_ALPHA_WIN);
       //        delay(8000);
@@ -183,6 +306,7 @@ void loop()
     break;
   case EXP_MODE_STAGE2:
     //
+    myDFPlayer.play(MP3_BRAVO_TEAM_WIN);
     Serial.println("BRAVO WIN");
     exp_lcd_judge(EXP_MODE_BRAVO_WIN);
     END = 1;
@@ -198,6 +322,87 @@ void loop()
     while (1)
       ;
   }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void printDetail(uint8_t type, int value){
+  switch (type) {
+    case TimeOut:
+      Serial.println(F("Time Out!"));
+      break;
+    case WrongStack:
+      Serial.println(F("Stack Wrong!"));
+      break;
+    case DFPlayerCardInserted:
+      Serial.println(F("Card Inserted!"));
+      break;
+    case DFPlayerCardRemoved:
+      Serial.println(F("Card Removed!"));
+      break;
+    case DFPlayerCardOnline:
+      Serial.println(F("Card Online!"));
+      break;
+    case DFPlayerUSBInserted:
+      Serial.println("USB Inserted!");
+      break;
+    case DFPlayerUSBRemoved:
+      Serial.println("USB Removed!");
+      break;
+    case DFPlayerPlayFinished:
+      Serial.print(F("Number:"));
+      Serial.print(value);
+      Serial.println(F(" Play Finished!"));
+      break;
+    case DFPlayerError:
+      Serial.print(F("DFPlayerError:"));
+      switch (value) {
+        case Busy:
+          Serial.println(F("Card not found"));
+          break;
+        case Sleeping:
+          Serial.println(F("Sleeping"));
+          break;
+        case SerialWrongStack:
+          Serial.println(F("Get Wrong Stack"));
+          break;
+        case CheckSumNotMatch:
+          Serial.println(F("Check Sum Not Match"));
+          break;
+        case FileIndexOut:
+          Serial.println(F("File Index Out of Bound"));
+          break;
+        case FileMismatch:
+          Serial.println(F("Cannot Find File"));
+          break;
+        case Advertise:
+          Serial.println(F("In Advertise"));
+          break;
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
+  }
+  
 }
 
 bool rfid_sensing(int stage)
@@ -260,6 +465,16 @@ bool rfid_sensing(int stage)
     Serial.println(" found");
 
     tlast = millis();
+
+     myDFPlayer.stop();
+    if(current_stage==EXP_MODE_STAGE0)
+    {
+      myDFPlayer.play(MP3_MOUNTING_BOMB_SIREN);
+    }
+    else if(current_stage==EXP_MODE_STAGE1)
+    {
+      myDFPlayer.play(MP3_MOUNTING_BOMB_SIREN);//MP3_UNMNTING_BOMB_SIREN
+    }
   }
 
   // falling edge
@@ -273,6 +488,8 @@ bool rfid_sensing(int stage)
     tlast = millis() - tlast;
     Serial.print("Tag gone: ");
     Serial.println(tlast);
+
+    myDFPlayer.stop();
   }
 
   //  if(sensing_time>0){
@@ -353,6 +570,20 @@ void TimingISR()
   EXP_MODE_STAGE2 = 2,
   DOM_MODE_STAGE0 = 3,
 */
+
+
+void exp_mp3_handling(int sensing_time, int current_stage)
+{
+  if(myDFPlayer.readType()==DFPlayerPlayFinished && sensing_time>0 && current_stage==EXP_MODE_STAGE0)
+  {
+    myDFPlayer.play(MP3_MOUNTING_BOMB_SIREN);
+    
+  }
+else if(myDFPlayer.readType()==DFPlayerPlayFinished && current_stage==EXP_MODE_STAGE1)
+  {
+    myDFPlayer.play(MP3_BOMB_MOUNTED_SIREN);
+    }
+  }
 
 void exp_lcd_judge(int exp_judge_mode)
 {
@@ -499,4 +730,48 @@ void dump_byte_array(byte *buffer, byte bufferSize)
     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
     Serial.print(buffer[i], HEX);
   }
+}
+
+int ir_input_mapping(int input)
+{
+  int mapped = -1;
+  // 25,69,70,71,68,64,67,7,21,9
+  // Serial.println(input);
+  switch (input)
+  {
+  case 25:
+    mapped = 0;
+    break;
+  case 69:
+    mapped = 1;
+    break;
+  case 70:
+    mapped = 2;
+    break;
+  case 71:
+    mapped = 3;
+    break;
+  case 68:
+    mapped = 4;
+    break;
+  case 64:
+    mapped = 5;
+    break;
+  case 67:
+    mapped = 6;
+    break;
+//  case 7:
+//    mapped = 7;
+//    break;
+//  case 21:
+//    mapped = 8;
+//    break;
+//  case 9:
+//    mapped = 9;
+//    break;
+  default:
+    mapped = -1;
+  }
+
+  return mapped;
 }
