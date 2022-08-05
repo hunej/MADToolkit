@@ -1,4 +1,4 @@
-// https://github.com/miguelbalboa/rfid/issues/352#issue-282870788
+
 
 // Header
 #include <SPI.h>
@@ -11,42 +11,47 @@
 #include "SoftwareSerial.h"
 #include "DFRobotDFPlayerMini.h"
 
-
 // Define
-#define RST_PIN 9 // Configurable, see typical pin layout above
-#define SS_PIN 10 // Configurable, see typical pin layout above, aka SDA pin
+#define RF_RST_PIN 9
+#define RF_SS_SDA_PIN 10
 #define BUZZER_PIN 3
 #define MP3_RX_PIN 6
 #define MP3_TX_PIN 7
-#define RECV_PIN 2
+#define IR_RECV_PIN 2
 
+#define DEBUG
+
+#ifdef DEBUG
+#define DEBUG_PRINT(x)        Serial.print(x)
+#define DEBUG_PRINTHEX(x, y)  Serial.print(x, y)
+#define DEBUG_PRINTLN(x)      Serial.println(x)
+#else
+#define DEBUG_PRINT(x)
+#define DEBUG_PRINTHEX(x, y)
+#define DEBUG_PRINTLN(x)
+#endif
 
 // Functions
-void printDetail(uint8_t type, int value);
 bool rfid_sensing(int stage);
 void TimingISR();
-void exp_mp3_handling(int sensing_time, int current_stage);
 void exp_lcd_judge(int exp_judge_mode);
 void exp_lcd_handling(int cntdwn, int sensing_t, int stage);
 bool cmp_stage_match(int stage, byte uid);
 void beep_short(int count);
 void beep_long(int duration);
-void mfrc522_fast_Reset();
-void dump_byte_array(byte *buffer, byte bufferSize);
 int ir_input_mapping(int input);
 
 // Global variables
-MFRC522 mfrc522(SS_PIN, RST_PIN);                              // Create MFRC522 instance
+MFRC522 mfrc522(RF_SS_SDA_PIN, RF_RST_PIN);                              // Create MFRC522 instance
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); // LCD
-SoftwareSerial mySoftwareSerial(MP3_RX_PIN, MP3_TX_PIN); // RX, TX
+SoftwareSerial MP3Serial(MP3_RX_PIN, MP3_TX_PIN);       // RX, TX
 DFRobotDFPlayerMini myDFPlayer;
-IRrecv irrecv(RECV_PIN);
-decode_results results;//IR
+IRrecv irrecv(IR_RECV_PIN);
 
 bool rfid_tag_present_prev = false;
 bool rfid_tag_present = false;
-int _rfid_error_counter = 0;
-bool _tag_found = false;
+int rfid_error_counter = 0;
+bool rfid_tag_found = false;
 
 bool stage_ahead = false;
 bool END = false;
@@ -62,6 +67,10 @@ int ir_timer_setting;
 
 unsigned long mp3_timer;
 
+
+int ir_raw_val[] = {25,69,70,71,68,64,67,7,21,9, 0x1C};
+
+
 // Enum
 enum PLAY_MODE_STAGE
 {
@@ -69,6 +78,7 @@ enum PLAY_MODE_STAGE
   EXP_MODE_STAGE1 = 1,
   EXP_MODE_STAGE2 = 2,
   DOM_MODE_STAGE0 = 3,
+  IDLE_MODE_STAGE0 = -1,
 
 } playstage;
 
@@ -115,7 +125,6 @@ enum MP3_LENGTH
 
 } mp3len;
 
-
 enum RFID_CARD_UID
 {
   ALPHA1 = 0x02,
@@ -127,6 +136,8 @@ enum RFID_CARD_UID
 
 } card_uid;
 
+
+
 void setup()
 {
   Serial.begin(115200); // Initialize serial communications with the PC
@@ -136,7 +147,7 @@ void setup()
 
   // RFID
   mfrc522.PCD_Init(); // Init MFRC522
-  
+
   // LCD
   lcd.begin(16, 2);
   lcd.backlight();
@@ -151,37 +162,36 @@ void setup()
   pinMode(BUZZER_PIN, OUTPUT); // BUZZER
   beep_short(3);
 
-
-
   // MP3
-  mySoftwareSerial.begin(9600);
-  Serial.println();
-  Serial.println(F("DFRobot DFPlayer Mini Demo"));
-  Serial.println(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
-  
-  if (!myDFPlayer.begin(mySoftwareSerial)) {  //Use softwareSerial to communicate with mp3.
-    Serial.println(F("Unable to begin:"));
-    Serial.println(F("1.Please recheck the connection!"));
-    Serial.println(F("2.Please insert the SD card!"));
-    while(true){
+  MP3Serial.begin(9600);
+  DEBUG_PRINTLN();
+  DEBUG_PRINTLN(F("DFRobot DFPlayer Mini Demo"));
+  DEBUG_PRINTLN(F("Initializing DFPlayer ... (May take 3~5 seconds)"));
+
+  if (!myDFPlayer.begin(MP3Serial))
+  { // Use softwareSerial to communicate with mp3.
+    DEBUG_PRINTLN(F("Unable to begin:"));
+    DEBUG_PRINTLN(F("1.Please recheck the connection!"));
+    DEBUG_PRINTLN(F("2.Please insert the SD card!"));
+    while (true)
+    {
       delay(0); // Code to compatible with ESP8266 watch dog.
     }
   }
-  Serial.println(F("DFPlayer Mini online."));
-  
-  myDFPlayer.volume(10);  //Set volume value. From 0 to 30
-  myDFPlayer.play(MP3_START);
-  delay(MP3_START_LENGTH);  
-  beep_short(3);
+  DEBUG_PRINTLN(F("DFPlayer Mini online."));
 
+  myDFPlayer.volume(10); // Set volume value. From 0 to 30
+  myDFPlayer.play(MP3_START);
+  delay(MP3_START_LENGTH);
+  beep_short(3);
 
   // IR
   irrecv.enableIRIn(); // Start the receiver
   ir_result = -2;
-  ir_timer_setting = 0;  
+  ir_timer_setting = 0;
   // receive countdown setting from ir controller
   lcd.clear();
-  lcd.setCursor(0, 0);  
+  lcd.setCursor(0, 0);
   while (IrReceiver.decodedIRData.command != 0x1C) // 0x1C is OK button
   {
     if (IrReceiver.decode())
@@ -196,44 +206,36 @@ void setup()
 
       ir_timer_setting = ir_timer_setting * 10 + ir_result;
       lcd.clear();
-      lcd.setCursor(0, 0); 
+      lcd.setCursor(0, 0);
       lcd.print("COUNTDOWN: ");
       lcd.print(ir_timer_setting);
       lcd.print("s");
-
 
       IrReceiver.resume();
     }
   }
   beep_short(3);
 
-
-
-  
   // ISR
   Timer1.initialize(500000); // 0.5s
   Timer1.attachInterrupt(TimingISR);
 
-  // Countdown
-  countdown = ir_timer_setting;//countdown = EXP_MODE_STAGE0_TIMING;
-
-  
+  countdown = ir_timer_setting; // countdown = EXP_MODE_STAGE0_TIMING;
 }
 
-// current_stage
+
 void loop()
 {
 
   if (halfsecond > 0)
   {
-    Serial.print("countdown: ");
-    Serial.println(countdown);
-    Serial.print("current_stage: ");
-    Serial.println(current_stage);
+    DEBUG_PRINT("countdown: ");
+    DEBUG_PRINTLN(countdown);
+    DEBUG_PRINT("current_stage: ");
+    DEBUG_PRINTLN(current_stage);
   }
-    exp_lcd_handling(countdown, sensing_time, current_stage);
-//    exp_mp3_handling(sensing_time, current_stage);
-    
+  exp_lcd_handling(countdown, sensing_time, current_stage);
+
   stage_ahead = rfid_sensing(current_stage);
 
   if (stage_ahead && current_stage == EXP_MODE_STAGE0)
@@ -243,26 +245,22 @@ void loop()
     lcd.print("MOUNTING DONE!");
     countdown = 999;
 
-    //      Serial.print(F("Card UID:"));
+    //      DEBUG_PRINT(F("Card UID:"));
     //      dump_byte_array(mfrc522.uid.uidByte, mfrc522.uid.size); // 顯示卡片的UID
-    //      Serial.println();
-    //      Serial.print(F("PICC type: "));
+    //      DEBUG_PRINTLN();
+    //      DEBUG_PRINT(F("PICC type: "));
     //      MFRC522::PICC_Type piccType = mfrc522.PICC_GetType(mfrc522.uid.sak);
-    //      Serial.println(mfrc522.PICC_GetTypeName(piccType));  //顯示卡片的類型
+    //      DEBUG_PRINTLN(mfrc522.PICC_GetTypeName(piccType));  //顯示卡片的類型
 
     mfrc522.PICC_HaltA();
 
-
     mp3_timer = millis();
     myDFPlayer.play(MP3_BOMB_MOUNTED_SIREN);
-      
+
     sensing_time = 0;
     current_stage++;
     delay(MP3_BOMB_MOUNTED_SIREN_LENGTH);
     countdown = EXP_MODE_STAGE1_TIMING;
-
-
-
   }
   else if (stage_ahead)
   {
@@ -282,24 +280,23 @@ void loop()
     if (countdown <= 0)
     {
       myDFPlayer.play(MP3_ALPHA_TEAM_LOSE_EXPLOSION);
-      Serial.println("ALPHA LOSE");
+      DEBUG_PRINTLN("ALPHA LOSE");
       exp_lcd_judge(EXP_MODE_ALPHA_LOSE);
       //        delay(8000);
     }
     break;
   case EXP_MODE_STAGE1:
     // playback BOMB_MOUNTED_SIREN if mp3 idle
-    if(millis() - mp3_timer > 7000)
+    if (millis() - mp3_timer > 7000)
     {
-        mp3_timer = millis();
+      mp3_timer = millis();
       myDFPlayer.play(MP3_BOMB_MOUNTED_SIREN);
-      }
+    }
 
-    
     if (countdown <= 0)
     {
       myDFPlayer.play(MP3_ALPHA_TEAM_WIN_EXPLOSION);
-      Serial.println("ALPHA WIN");
+      DEBUG_PRINTLN("ALPHA WIN");
       exp_lcd_judge(EXP_MODE_ALPHA_WIN);
       //        delay(8000);
     }
@@ -307,103 +304,23 @@ void loop()
   case EXP_MODE_STAGE2:
     //
     myDFPlayer.play(MP3_BRAVO_TEAM_WIN);
-    Serial.println("BRAVO WIN");
+    DEBUG_PRINTLN("BRAVO WIN");
     exp_lcd_judge(EXP_MODE_BRAVO_WIN);
-    END = 1;
+    END = true;
     //      delay(8000);
     break;
   default:
-    Serial.println("Invalid stage number");
+    DEBUG_PRINTLN("Invalid stage number");
   }
 
-  if (END)
+  if (END==true)
   {
-    beep_short(10);
-    while (1)
-      ;
+    beep_short(5);
+    current_stage = IDLE_MODE_STAGE0;
   }
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-void printDetail(uint8_t type, int value){
-  switch (type) {
-    case TimeOut:
-      Serial.println(F("Time Out!"));
-      break;
-    case WrongStack:
-      Serial.println(F("Stack Wrong!"));
-      break;
-    case DFPlayerCardInserted:
-      Serial.println(F("Card Inserted!"));
-      break;
-    case DFPlayerCardRemoved:
-      Serial.println(F("Card Removed!"));
-      break;
-    case DFPlayerCardOnline:
-      Serial.println(F("Card Online!"));
-      break;
-    case DFPlayerUSBInserted:
-      Serial.println("USB Inserted!");
-      break;
-    case DFPlayerUSBRemoved:
-      Serial.println("USB Removed!");
-      break;
-    case DFPlayerPlayFinished:
-      Serial.print(F("Number:"));
-      Serial.print(value);
-      Serial.println(F(" Play Finished!"));
-      break;
-    case DFPlayerError:
-      Serial.print(F("DFPlayerError:"));
-      switch (value) {
-        case Busy:
-          Serial.println(F("Card not found"));
-          break;
-        case Sleeping:
-          Serial.println(F("Sleeping"));
-          break;
-        case SerialWrongStack:
-          Serial.println(F("Get Wrong Stack"));
-          break;
-        case CheckSumNotMatch:
-          Serial.println(F("Check Sum Not Match"));
-          break;
-        case FileIndexOut:
-          Serial.println(F("File Index Out of Bound"));
-          break;
-        case FileMismatch:
-          Serial.println(F("Cannot Find File"));
-          break;
-        case Advertise:
-          Serial.println(F("In Advertise"));
-          break;
-        default:
-          break;
-      }
-      break;
-    default:
-      break;
-  }
-  
-}
 
 bool rfid_sensing(int stage)
 {
@@ -411,10 +328,10 @@ bool rfid_sensing(int stage)
 
   rfid_tag_present_prev = rfid_tag_present;
 
-  _rfid_error_counter += 1;
-  if (_rfid_error_counter > 2)
+  rfid_error_counter += 1;
+  if (rfid_error_counter > 2)
   {
-    _tag_found = false;
+    rfid_tag_found = false;
   }
 
   // Detect Tag without looking for collisions
@@ -435,45 +352,45 @@ bool rfid_sensing(int stage)
     { // Since a PICC placed get Serial and continue
       return;
     }
-    _rfid_error_counter = 0;
-    _tag_found = true;
+    rfid_error_counter = 0;
+    rfid_tag_found = true;
   }
 
-  rfid_tag_present = _tag_found;
+  rfid_tag_present = rfid_tag_found;
 
   if (!cmp_stage_match(stage, mfrc522.uid.uidByte[3]))
   {
-    //    Serial.print("false!!");
+    //    DEBUG_PRINT("false!!");
     sensing_time = 0;
     return false;
   }
   else
   {
-    //    Serial.print("true!!");
+    //    DEBUG_PRINT("true!!");
   }
 
   // rising edge
   if (rfid_tag_present && !rfid_tag_present_prev)
   {
     sensing_time = 0;
-    Serial.print("_tag_found: ");
-    Serial.print(_tag_found);
-    Serial.print(", ");
+    DEBUG_PRINT("rfid_tag_found: ");
+    DEBUG_PRINT(rfid_tag_found);
+    DEBUG_PRINT(", ");
 
-    Serial.print("Tag 0x");
-    Serial.print(mfrc522.uid.uidByte[3], HEX);
-    Serial.println(" found");
+    DEBUG_PRINT("Tag 0x");
+    DEBUG_PRINTHEX(mfrc522.uid.uidByte[3], HEX);
+    DEBUG_PRINTLN(" found");
 
     tlast = millis();
 
-     myDFPlayer.stop();
-    if(current_stage==EXP_MODE_STAGE0)
+    myDFPlayer.stop();
+    if (current_stage == EXP_MODE_STAGE0)
     {
       myDFPlayer.play(MP3_MOUNTING_BOMB_SIREN);
     }
-    else if(current_stage==EXP_MODE_STAGE1)
+    else if (current_stage == EXP_MODE_STAGE1)
     {
-      myDFPlayer.play(MP3_MOUNTING_BOMB_SIREN);//MP3_UNMNTING_BOMB_SIREN
+      myDFPlayer.play(MP3_MOUNTING_BOMB_SIREN); // MP3_UNMNTING_BOMB_SIREN
     }
   }
 
@@ -481,26 +398,26 @@ bool rfid_sensing(int stage)
   if (!rfid_tag_present && rfid_tag_present_prev)
   {
     sensing_time = 0;
-    Serial.print("_tag_found: ");
-    Serial.print(_tag_found);
-    Serial.print(", ");
+    DEBUG_PRINT("tag_found: ");
+    DEBUG_PRINT(rfid_tag_found);
+    DEBUG_PRINT(", ");
 
     tlast = millis() - tlast;
-    Serial.print("Tag gone: ");
-    Serial.println(tlast);
+    DEBUG_PRINT("Tag gone: ");
+    DEBUG_PRINTLN(tlast);
 
     myDFPlayer.stop();
   }
 
   //  if(sensing_time>0){
-  //    Serial.print("sensing_time: ");
-  //    Serial.println(sensing_time);
+  //    DEBUG_PRINT("sensing_time: ");
+  //    DEBUG_PRINTLN(sensing_time);
   //  }
 
   if (sensing_time > 3000)
   {
-    Serial.print("sensing_time: ");
-    Serial.println(sensing_time);
+    DEBUG_PRINT("sensing_time: ");
+    DEBUG_PRINTLN(sensing_time);
     sensing_time = 0;
     return true;
   }
@@ -519,13 +436,13 @@ void TimingISR()
 
   halfsecond--;
 
-  if (_tag_found)
+  if (rfid_tag_found)
   {
     sensing_time += 500;
   }
 
-  //  Serial.print("countdown: ");
-  //  Serial.println(countdown);
+  //  DEBUG_PRINT("countdown: ");
+  //  DEBUG_PRINTLN(countdown);
 
   beeptoggle = (~beeptoggle);
   if (beeptoggle)
@@ -558,32 +475,9 @@ void TimingISR()
   }
 }
 
-/*
-  ALPHA1 = 0x02,
-  BRAVO1 = 0x53,
-  BRAVO2 = 0xDB,
-  MOUNT1 = 0x63,
-  MOUNT2 = 0x22,
-
-  EXP_MODE_STAGE0 = 0,
-  EXP_MODE_STAGE1 = 1,
-  EXP_MODE_STAGE2 = 2,
-  DOM_MODE_STAGE0 = 3,
-*/
 
 
-void exp_mp3_handling(int sensing_time, int current_stage)
-{
-  if(myDFPlayer.readType()==DFPlayerPlayFinished && sensing_time>0 && current_stage==EXP_MODE_STAGE0)
-  {
-    myDFPlayer.play(MP3_MOUNTING_BOMB_SIREN);
-    
-  }
-else if(myDFPlayer.readType()==DFPlayerPlayFinished && current_stage==EXP_MODE_STAGE1)
-  {
-    myDFPlayer.play(MP3_BOMB_MOUNTED_SIREN);
-    }
-  }
+
 
 void exp_lcd_judge(int exp_judge_mode)
 {
@@ -615,7 +509,7 @@ void exp_lcd_handling(int cntdwn, int sensing_t, int stage)
   lcd.print(cntdwn);
   lcd.print("s");
 
-  Serial.println(sensing_t);
+  DEBUG_PRINTLN(sensing_t);
 
   if (sensing_t > 0 && stage == EXP_MODE_STAGE0)
   {
@@ -667,19 +561,19 @@ void exp_lcd_handling(int cntdwn, int sensing_t, int stage)
 bool cmp_stage_match(int stage, byte uid)
 {
   int uid32 = (int)uid;
-  //  Serial.print("got uid!!!!!!!!!!: 0x");
-  //  Serial.println(uid32, HEX);
-  //  Serial.print("stage: ");
-  //  Serial.println(stage);
+  //  DEBUG_PRINT("got uid!!!!!!!!!!: 0x");
+  //  DEBUG_PRINTLN(uid32, HEX);
+  //  DEBUG_PRINT("stage: ");
+  //  DEBUG_PRINTLN(stage);
 
   if (stage == EXP_MODE_STAGE0 && (uid == MOUNT1 || uid == MOUNT2))
   {
-    //    Serial.println("EXP_MODE_STAGE0 pass");
+    //    DEBUG_PRINTLN("EXP_MODE_STAGE0 pass");
     return true;
   }
   else if (stage == EXP_MODE_STAGE1 && (uid == BRAVO1 || uid == BRAVO2))
   {
-    //    Serial.println("EXP_MODE_STAGE1 pass");
+    //    DEBUG_PRINTLN("EXP_MODE_STAGE1 pass");
     return true;
   }
   else
@@ -707,36 +601,13 @@ void beep_long(int duration)
 
   delay(100);
 }
-void mfrc522_fast_Reset()
-{
-  digitalWrite(RST_PIN, HIGH);
-  mfrc522.PCD_Reset();
-  mfrc522.PCD_WriteRegister(mfrc522.TModeReg, 0x80);      // TAuto=1; timer starts automatically at the end of the transmission in all communication modes at all speeds
-  mfrc522.PCD_WriteRegister(mfrc522.TPrescalerReg, 0x43); // 10µs.
 
-  mfrc522.PCD_WriteRegister(mfrc522.TReloadRegH, 0x00); // Reload timer with 0x01E = 30, ie 0.3ms before timeout.
-  mfrc522.PCD_WriteRegister(mfrc522.TReloadRegL, 0x1E);
-  mfrc522.PCD_WriteRegister(mfrc522.TReloadRegL, 0x5);
-
-  mfrc522.PCD_WriteRegister(mfrc522.TxASKReg, 0x40); // Default 0x00. Force a 100 % ASK modulation independent of the ModGsPReg register setting
-  mfrc522.PCD_WriteRegister(mfrc522.ModeReg, 0x3D);  // Default 0x3F. Set the preset value for the CRC coprocessor for the CalcCRC command to 0x6363 (ISO 14443-3 part 6.2.4)
-
-  mfrc522.PCD_AntennaOn(); // Enable the antenna driver pins TX1 and TX2 (they were disabled by the reset)
-}
-void dump_byte_array(byte *buffer, byte bufferSize)
-{
-  for (byte i = 0; i < bufferSize; i++)
-  {
-    Serial.print(buffer[i] < 0x10 ? " 0" : " ");
-    Serial.print(buffer[i], HEX);
-  }
-}
 
 int ir_input_mapping(int input)
 {
   int mapped = -1;
   // 25,69,70,71,68,64,67,7,21,9
-  // Serial.println(input);
+  // DEBUG_PRINTLN(input);
   switch (input)
   {
   case 25:
@@ -760,15 +631,15 @@ int ir_input_mapping(int input)
   case 67:
     mapped = 6;
     break;
-//  case 7:
-//    mapped = 7;
-//    break;
-//  case 21:
-//    mapped = 8;
-//    break;
-//  case 9:
-//    mapped = 9;
-//    break;
+  case 7:
+    mapped = 7;
+    break;
+  case 21:
+    mapped = 8;
+    break;
+  case 9:
+    mapped = 9;
+    break;
   default:
     mapped = -1;
   }
