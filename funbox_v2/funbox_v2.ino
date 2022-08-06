@@ -641,7 +641,7 @@ bool rfid_exp_sensing(int stage)
     }
     else if (current_stage == EXP_MODE_STAGE1)
     {
-      myDFPlayer.play(MP3_MOUNTING_BOMB_SIREN); // MP3_UNMNTING_BOMB_SIREN
+      myDFPlayer.play(MP3_UNMNTING_BOMB_SIREN);
     }
   }
 
