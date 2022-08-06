@@ -1,4 +1,4 @@
-
+// Softwarereset lib
 
 // Header
 #include <SPI.h>
@@ -10,6 +10,7 @@
 #include "Arduino.h"
 #include "SoftwareSerial.h"
 #include "DFRobotDFPlayerMini.h"
+#include "SoftwareReset.hpp"
 
 // Define
 #define RF_RST_PIN 9
@@ -19,12 +20,14 @@
 #define MP3_TX_PIN 7
 #define IR_RECV_PIN 2
 
+#define MP3_VOL 10
+
 #define DEBUG
 
 #ifdef DEBUG
-#define DEBUG_PRINT(x)        Serial.print(x)
-#define DEBUG_PRINTHEX(x, y)  Serial.print(x, y)
-#define DEBUG_PRINTLN(x)      Serial.println(x)
+#define DEBUG_PRINT(x) Serial.print(x)
+#define DEBUG_PRINTHEX(x, y) Serial.print(x, y)
+#define DEBUG_PRINTLN(x) Serial.println(x)
 #else
 #define DEBUG_PRINT(x)
 #define DEBUG_PRINTHEX(x, y)
@@ -42,9 +45,9 @@ void beep_long(int duration);
 int ir_input_mapping(int input);
 
 // Global variables
-MFRC522 mfrc522(RF_SS_SDA_PIN, RF_RST_PIN);                              // Create MFRC522 instance
+MFRC522 mfrc522(RF_SS_SDA_PIN, RF_RST_PIN);                    // Create MFRC522 instance
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); // LCD
-SoftwareSerial MP3Serial(MP3_RX_PIN, MP3_TX_PIN);       // RX, TX
+SoftwareSerial MP3Serial(MP3_RX_PIN, MP3_TX_PIN);              // RX, TX
 DFRobotDFPlayerMini myDFPlayer;
 IRrecv irrecv(IR_RECV_PIN);
 
@@ -67,9 +70,10 @@ int ir_timer_setting;
 
 unsigned long mp3_timer;
 
-
-int ir_raw_val[] = {25,69,70,71,68,64,67,7,21,9, 0x1C};
-
+#define IR_OK 0x1C
+#define IR_OK_MAPPED -2
+#define IR_IGNORE_MAPPED -1
+int ir_raw_val[] = {25, 69, 70, 71, 68, 64, 67, 7, 21, 9, 0x1C};
 
 // Enum
 enum PLAY_MODE_STAGE
@@ -136,8 +140,6 @@ enum RFID_CARD_UID
 
 } card_uid;
 
-
-
 void setup()
 {
   Serial.begin(115200); // Initialize serial communications with the PC
@@ -180,7 +182,7 @@ void setup()
   }
   DEBUG_PRINTLN(F("DFPlayer Mini online."));
 
-  myDFPlayer.volume(10); // Set volume value. From 0 to 30
+  myDFPlayer.volume(MP3_VOL); // Set volume value. From 0 to 30
   myDFPlayer.play(MP3_START);
   delay(MP3_START_LENGTH);
   beep_short(3);
@@ -192,7 +194,12 @@ void setup()
   // receive countdown setting from ir controller
   lcd.clear();
   lcd.setCursor(0, 0);
-  while (IrReceiver.decodedIRData.command != 0x1C) // 0x1C is OK button
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("COUNTDOWN: ");
+
+  while (IrReceiver.decodedIRData.command != IR_OK) // 0x1C is OK button
   {
     if (IrReceiver.decode())
     {
@@ -223,8 +230,50 @@ void setup()
   countdown = ir_timer_setting; // countdown = EXP_MODE_STAGE0_TIMING;
 }
 
-
 void loop()
+{
+  if (current_stage == DOM_MODE_STAGE0)
+    dom_mode_loop();
+  else if (current_stage == IDLE_MODE_STAGE0)
+    idle_mode_loop();
+  else
+    exp_mode_loop();
+}
+
+void idle_mode_loop()
+{
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Milsig Taiwan");
+  delay(1000);
+  lcd.setCursor(0, 1);
+  lcd.print("PRESS OK RESET");
+  delay(1000);
+
+  irrecv.enableIRIn();
+  while (1)
+  {
+    if (IrReceiver.decode())
+    {
+      ir_result = IrReceiver.decodedIRData.command;
+      ir_result = ir_input_mapping(ir_result);
+      DEBUG_PRINTLN(ir_result);
+
+      beep_short(1);
+
+      if (ir_result == IR_OK_MAPPED)
+      {
+        softwareReset::standard();
+      }
+
+      IrReceiver.resume();
+    }
+  }
+}
+void dom_mode_loop()
+{
+}
+void exp_mode_loop()
 {
 
   if (halfsecond > 0)
@@ -313,14 +362,41 @@ void loop()
     DEBUG_PRINTLN("Invalid stage number");
   }
 
-  if (END==true)
+  if (END == true)
   {
     beep_short(5);
-    current_stage = IDLE_MODE_STAGE0;
+
+    lcd.setCursor(0, 1);
+    lcd.print("PRESS OK TO EXIT");
+    irrecv.enableIRIn(); // Start the receiver
+                         //  while (1) // 0x1C is OK button
+                         //  {
+                         // DEBUG_PRINTLN(IrReceiver.decodedIRData.command);
+    //  }
+    while (1)
+    {
+      if (IrReceiver.decode())
+      {
+        ir_result = IrReceiver.decodedIRData.command;
+        ir_result = ir_input_mapping(ir_result);
+        DEBUG_PRINTLN(ir_result);
+
+        beep_short(1);
+
+        if (ir_result == IR_OK_MAPPED)
+        {
+          // beep_short(1);
+          lcd.clear();
+          END = false;
+          current_stage = IDLE_MODE_STAGE0;
+          return;
+        }
+
+        IrReceiver.resume();
+      }
+    }
   }
 }
-
-
 
 bool rfid_sensing(int stage)
 {
@@ -430,7 +506,7 @@ void TimingISR()
 
   if (END)
   {
-    digitalWrite(BUZZER_PIN, LOW);
+    // digitalWrite(BUZZER_PIN, LOW);
     return;
   }
 
@@ -474,10 +550,6 @@ void TimingISR()
     halfsecond = 2;
   }
 }
-
-
-
-
 
 void exp_lcd_judge(int exp_judge_mode)
 {
@@ -602,47 +674,18 @@ void beep_long(int duration)
   delay(100);
 }
 
-
 int ir_input_mapping(int input)
 {
-  int mapped = -1;
-  // 25,69,70,71,68,64,67,7,21,9
-  // DEBUG_PRINTLN(input);
-  switch (input)
+  int i;
+  if (input == IR_OK)
+    return IR_OK_MAPPED;
+  for (i = 0; i < 10; i++)
   {
-  case 25:
-    mapped = 0;
-    break;
-  case 69:
-    mapped = 1;
-    break;
-  case 70:
-    mapped = 2;
-    break;
-  case 71:
-    mapped = 3;
-    break;
-  case 68:
-    mapped = 4;
-    break;
-  case 64:
-    mapped = 5;
-    break;
-  case 67:
-    mapped = 6;
-    break;
-  case 7:
-    mapped = 7;
-    break;
-  case 21:
-    mapped = 8;
-    break;
-  case 9:
-    mapped = 9;
-    break;
-  default:
-    mapped = -1;
+    if (input == ir_raw_val[i])
+    {
+      return i;
+    }
   }
 
-  return mapped;
+  return IR_IGNORE_MAPPED;
 }
