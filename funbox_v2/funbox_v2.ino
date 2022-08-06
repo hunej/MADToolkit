@@ -20,9 +20,9 @@
 #define MP3_TX_PIN 7
 #define IR_RECV_PIN 2
 
-#define MP3_VOL 10
+#define MP3_VOL 30
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x) Serial.print(x)
@@ -35,11 +35,11 @@
 #endif
 
 // Functions
-bool rfid_sensing(int stage);
+bool rfid_exp_sensing(int stage);
 void TimingISR();
 void exp_lcd_judge(int exp_judge_mode);
 void exp_lcd_handling(int cntdwn, int sensing_t, int stage);
-bool cmp_stage_match(int stage, byte uid);
+bool exp_cmp_stage_match(int stage, byte uid);
 void beep_short(int count);
 void beep_long(int duration);
 int ir_input_mapping(int input);
@@ -64,6 +64,8 @@ int halfsecond = 2;
 int beeptoggle = 0;
 int countdown = 0; // second
 int sensing_time = 0;
+int alpha_sensing_time = 0;
+int bravo_sensing_time = 0;
 int current_stage = 0;
 int ir_result;
 int ir_timer_setting;
@@ -132,7 +134,7 @@ enum MP3_LENGTH
 enum RFID_CARD_UID
 {
   ALPHA1 = 0x02,
-  //  ALPHA2 = 0x??,
+  ALPHA2 = 0x5A,
   BRAVO1 = 0x53,
   BRAVO2 = 0xDB,
   MOUNT1 = 0x63,
@@ -189,11 +191,39 @@ void setup()
 
   // IR
   irrecv.enableIRIn(); // Start the receiver
-  ir_result = -2;
-  ir_timer_setting = 0;
-  // receive countdown setting from ir controller
   lcd.clear();
   lcd.setCursor(0, 0);
+  lcd.print("CHOOSE MODE: ");
+  lcd.setCursor(0, 1);
+  lcd.print("1:EXP 2:DOM");
+  while (1)
+  {
+    if (IrReceiver.decode())
+    {
+      ir_result = IrReceiver.decodedIRData.command;
+      ir_result = ir_input_mapping(ir_result);
+      DEBUG_PRINTLN(ir_result);
+
+      beep_short(1);
+
+      if (ir_result == 1)
+      {
+        current_stage = EXP_MODE_STAGE0;
+        break;
+      }
+      else if (ir_result == 2)
+      {
+        current_stage = DOM_MODE_STAGE0;
+        break;
+      }
+
+      IrReceiver.resume();
+    }
+  }
+
+  irrecv.enableIRIn(); // Start the receiver
+  ir_result = -2;
+  ir_timer_setting = 0;
 
   lcd.clear();
   lcd.setCursor(0, 0);
@@ -272,6 +302,78 @@ void idle_mode_loop()
 }
 void dom_mode_loop()
 {
+
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("ALPHA: ");
+  lcd.print(alpha_sensing_time / 2);
+  if (alpha_sensing_time % 2)
+    lcd.print(".5s");
+  else
+    lcd.print("s");
+
+  lcd.setCursor(0, 1);
+  lcd.print("BRAVO: ");
+  lcd.print(bravo_sensing_time / 2);
+  if (bravo_sensing_time % 2)
+    lcd.print(".5s");
+  else
+    lcd.print("s");
+
+  rfid_dom_sensing();
+
+  if (countdown <= 0 || alpha_sensing_time > 60 || bravo_sensing_time > 60)
+  {
+
+    if (alpha_sensing_time > bravo_sensing_time)
+    {
+      DEBUG_PRINTLN("ALPHA WIN");
+      exp_lcd_judge(EXP_MODE_ALPHA_WIN);
+    }
+    else
+    {
+
+      DEBUG_PRINTLN("BRAVO WIN");
+      exp_lcd_judge(EXP_MODE_BRAVO_WIN);
+    }
+
+    END = true;
+  }
+
+  if (END == true)
+  {
+    beep_short(5);
+
+    lcd.setCursor(0, 1);
+    lcd.print("PRESS OK TO EXIT");
+    irrecv.enableIRIn(); // Start the receiver
+                         //  while (1) // 0x1C is OK button
+                         //  {
+                         // DEBUG_PRINTLN(IrReceiver.decodedIRData.command);
+    //  }
+    while (1)
+    {
+      if (IrReceiver.decode())
+      {
+        ir_result = IrReceiver.decodedIRData.command;
+        ir_result = ir_input_mapping(ir_result);
+        DEBUG_PRINTLN(ir_result);
+
+        beep_short(1);
+
+        if (ir_result == IR_OK_MAPPED)
+        {
+          // beep_short(1);
+          lcd.clear();
+          END = false;
+          current_stage = IDLE_MODE_STAGE0;
+          return;
+        }
+
+        IrReceiver.resume();
+      }
+    }
+  }
 }
 void exp_mode_loop()
 {
@@ -285,7 +387,7 @@ void exp_mode_loop()
   }
   exp_lcd_handling(countdown, sensing_time, current_stage);
 
-  stage_ahead = rfid_sensing(current_stage);
+  stage_ahead = rfid_exp_sensing(current_stage);
 
   if (stage_ahead && current_stage == EXP_MODE_STAGE0)
   {
@@ -398,7 +500,7 @@ void exp_mode_loop()
   }
 }
 
-bool rfid_sensing(int stage)
+void rfid_dom_sensing(void)
 {
   int tlast;
 
@@ -434,7 +536,80 @@ bool rfid_sensing(int stage)
 
   rfid_tag_present = rfid_tag_found;
 
-  if (!cmp_stage_match(stage, mfrc522.uid.uidByte[3]))
+  // rising edge
+  if (rfid_tag_present && !rfid_tag_present_prev)
+  {
+    sensing_time = 0;
+    DEBUG_PRINT("rfid_tag_found: ");
+    DEBUG_PRINT(rfid_tag_found);
+    DEBUG_PRINT(", ");
+
+    DEBUG_PRINT("Tag 0x");
+    DEBUG_PRINTHEX(mfrc522.uid.uidByte[3], HEX);
+    DEBUG_PRINTLN(" found");
+
+    tlast = millis();
+  }
+
+  // falling edge
+  if (!rfid_tag_present && rfid_tag_present_prev)
+  {
+
+    //    if(mfrc522.uid.uidByte[3]==ALPHA1 || mfrc522.uid.uidByte[3]==ALPHA2)
+    //    alpha_sensing_time+=sensing_time/1000;
+    //    else if(mfrc522.uid.uidByte[3]==BRAVO1 || mfrc522.uid.uidByte[3]==BRAVO2)
+    //    bravo_sensing_time+=sensing_time/1000;
+
+    sensing_time = 0;
+    DEBUG_PRINT("tag_found: ");
+    DEBUG_PRINT(rfid_tag_found);
+    DEBUG_PRINT(", ");
+
+    tlast = millis() - tlast;
+    DEBUG_PRINT("Tag gone: ");
+    DEBUG_PRINTLN(tlast);
+  }
+
+  return;
+}
+
+bool rfid_exp_sensing(int stage)
+{
+  int tlast;
+
+  rfid_tag_present_prev = rfid_tag_present;
+
+  rfid_error_counter += 1;
+  if (rfid_error_counter > 2)
+  {
+    rfid_tag_found = false;
+  }
+
+  // Detect Tag without looking for collisions
+  byte bufferATQA[2];
+  byte bufferSize = sizeof(bufferATQA);
+
+  // Reset baud rates
+  mfrc522.PCD_WriteRegister(mfrc522.TxModeReg, 0x00);
+  mfrc522.PCD_WriteRegister(mfrc522.RxModeReg, 0x00);
+  // Reset ModWidthReg
+  mfrc522.PCD_WriteRegister(mfrc522.ModWidthReg, 0x26);
+
+  MFRC522::StatusCode result = mfrc522.PICC_RequestA(bufferATQA, &bufferSize);
+
+  if (result == mfrc522.STATUS_OK)
+  {
+    if (!mfrc522.PICC_ReadCardSerial())
+    { // Since a PICC placed get Serial and continue
+      return;
+    }
+    rfid_error_counter = 0;
+    rfid_tag_found = true;
+  }
+
+  rfid_tag_present = rfid_tag_found;
+
+  if (!exp_cmp_stage_match(stage, mfrc522.uid.uidByte[3]))
   {
     //    DEBUG_PRINT("false!!");
     sensing_time = 0;
@@ -515,6 +690,11 @@ void TimingISR()
   if (rfid_tag_found)
   {
     sensing_time += 500;
+
+    if (mfrc522.uid.uidByte[3] == ALPHA1 || mfrc522.uid.uidByte[3] == ALPHA2 || mfrc522.uid.uidByte[3] == MOUNT1)
+      alpha_sensing_time++;
+    else if (mfrc522.uid.uidByte[3] == BRAVO1 || mfrc522.uid.uidByte[3] == BRAVO2 || mfrc522.uid.uidByte[3] == MOUNT2)
+      bravo_sensing_time++;
   }
 
   //  DEBUG_PRINT("countdown: ");
@@ -630,7 +810,7 @@ void exp_lcd_handling(int cntdwn, int sensing_t, int stage)
 
   return;
 }
-bool cmp_stage_match(int stage, byte uid)
+bool exp_cmp_stage_match(int stage, byte uid)
 {
   int uid32 = (int)uid;
   //  DEBUG_PRINT("got uid!!!!!!!!!!: 0x");
