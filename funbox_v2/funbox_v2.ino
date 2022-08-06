@@ -310,7 +310,7 @@ void dom_mode_loop()
   if (alpha_sensing_time % 2)
     lcd.print(".5s");
   else
-    lcd.print("s");
+    lcd.print(".0s");
 
   lcd.setCursor(0, 1);
   lcd.print("BRAVO: ");
@@ -318,7 +318,7 @@ void dom_mode_loop()
   if (bravo_sensing_time % 2)
     lcd.print(".5s");
   else
-    lcd.print("s");
+    lcd.print(".0s");
 
   rfid_dom_sensing();
 
