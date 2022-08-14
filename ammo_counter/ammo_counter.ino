@@ -30,8 +30,8 @@ TM1637 tm1637(CLK, DIO);
 
 void setup() {
   // put your setup code here, to run once:
-  Serial.begin(115200);//設置波特率為115200
-
+  Serial.begin(115200);
+  
   tm1637.set();
   tm1637.init();
   tm1637.point(POINT_ON);
@@ -47,21 +47,10 @@ void setup() {
 }
 
 
-
-//void loop(){
-//    digitalWrite(Relay, RELAY_ON);  // turn the relay on
-//  delay(1000);                  // wait
-// 
-//  digitalWrite(Relay, RELAY_OFF); // turn the relay off
-//  delay(1000);                  // wait
-//  
-//  }
-void loop() {
-//  int sensorValue = digitalRead(7);//analogRead(A0);  //讀取A0的值
-//  Serial.println(sensorValue);       //在監控視窗顯示讀取的值
-//  delay(10);
+void loop() {  
   while(digitalRead(7)==0);
 
+  
 
   //triggered now
   tdelta = millis() - tlast;
@@ -97,9 +86,8 @@ int relay_toggle = 0;
 void TimingISR()
 { // 250ms
   //halfsecond--;
-Serial.println(led_lifecycle);
-  
-  
+
+   
   qsec++;
   
   if(qsec == 4)
