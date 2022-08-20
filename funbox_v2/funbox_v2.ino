@@ -843,7 +843,7 @@ void beep_short(int count)
     digitalWrite(BUZZER_PIN, LOW);
     delay(100);
   }
-  digitalWrite(9, LOW);
+  digitalWrite(BUZZER_PIN, LOW);
 }
 void beep_long(int duration)
 {
