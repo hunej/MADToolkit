@@ -14,12 +14,13 @@ void printDetail(uint8_t type, int value);
 
 enum PLAYBACK_MODE
 {
-  START = 8,//I set 0001_START.mp3 and fucking dont know why got 8 here
-  ALPHA_TEAM_LOSE_EXPLOSION = 7,
-  ALPHA_TEAM_WIN_EXPLOSION = 6,
-  BRAVO_TEAM_WIN = 5,
+  START = 7,//I set 0001_START.mp3 and fucking dont know why got 8 here
+  ALPHA_TEAM_LOSE_EXPLOSION = 1,
+  ALPHA_TEAM_WIN_EXPLOSION = 2,
+  BRAVO_TEAM_WIN = 3,
   MOUNTING_BOMB_SIREN = 4,
-  BOMB_MOUNTED_SIREN = 3,
+  MP3_UNMNTING_BOMB_SIREN = 5,
+  BOMB_MOUNTED_SIREN = 6,
   GROUNDED_SIREN = 1,
 
 } playback;
@@ -44,7 +45,7 @@ void setup()
   Serial.println(F("DFPlayer Mini online."));
   
   myDFPlayer.volume(10);  //Set volume value. From 0 to 30
-  myDFPlayer.play(1);
+  myDFPlayer.play(5);
   delay(5000);
 }
 
