@@ -19,15 +19,17 @@ void setup()
 
 void loop() {
 // receive countdown setting from ir controller
-  while (IrReceiver.decodedIRData.command != 0x1C) // 0x1C is OK button
-  {
-                Serial.println(IrReceiver.decodedIRData.command, HEX);
-
+  while (1) // 0x1C is OK button
+  {             
+   //The function decode(&results)) is deprecated and may not work as expected! 
+   //Just use decode() without a parameter and IrReceiver.decodedIRData.<fieldname> .
+ 
     if (IrReceiver.decode())
     {
-            Serial.println(IrReceiver.decodedIRData.command, HEX);
+      
       ir_result = IrReceiver.decodedIRData.command;
-
+      if(ir_result!=0)
+        Serial.println(ir_result);
 
 
       IrReceiver.resume();
