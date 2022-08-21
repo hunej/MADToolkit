@@ -42,7 +42,7 @@ void exp_lcd_handling(int cntdwn, int sensing_t, int stage);
 bool exp_cmp_stage_match(int stage, byte uid);
 void beep_short(int count);
 void beep_long(int duration);
-int ir_input_mapping(int input);
+int ir_input_mapping(uint32_t input);
 
 // Global variables
 MFRC522 mfrc522(RF_SS_SDA_PIN, RF_RST_PIN);                    // Create MFRC522 instance
@@ -67,15 +67,16 @@ int sensing_time = 0;
 int alpha_sensing_time = 0;
 int bravo_sensing_time = 0;
 int current_stage = 0;
+uint32_t ir_result_raw;
 int ir_result;
 int ir_timer_setting;
 
 unsigned long mp3_timer;
 
-#define IR_OK 0x1C
+#define IR_OK 0xEA15FF00
 #define IR_OK_MAPPED -2
 #define IR_IGNORE_MAPPED -1
-int ir_raw_val[] = {25, 69, 70, 71, 68, 64, 67, 7, 21, 9, 0x1C};
+uint32_t ir_raw_val[] = {0xE916FF00, 0xF30CFF00, 0xE718FF00, 0xA15EFF00, 0xF708FF00, 0xE31CFF00, 0xA55AFF00, 0xBD42FF00, 0xAD52FF00, 0xB54AFF00, 0xEA15FF00};
 
 // Enum
 enum PLAY_MODE_STAGE
@@ -133,12 +134,12 @@ enum MP3_LENGTH
 
 enum RFID_CARD_UID
 {
-  ALPHA1 = 0x02,
-  ALPHA2 = 0x5A,
-  BRAVO1 = 0x53,
-  BRAVO2 = 0xDB,
-  MOUNT1 = 0x63,
-  MOUNT2 = 0x22,
+//  ALPHA1 = 0x99,
+//  ALPHA2 = 0x5A,
+  BRAVO1 = 0x1E,
+  BRAVO2 = 0x39,
+  MOUNT1 = 0x80,
+  MOUNT2 = 0x20,
 
 } card_uid;
 
@@ -200,8 +201,8 @@ void setup()
   {
     if (IrReceiver.decode())
     {
-      ir_result = IrReceiver.decodedIRData.command;
-      ir_result = ir_input_mapping(ir_result);
+      ir_result_raw = IrReceiver.decodedIRData.decodedRawData;
+      ir_result = ir_input_mapping(ir_result_raw);
       DEBUG_PRINTLN(ir_result);
 
       beep_short(1);
@@ -229,12 +230,12 @@ void setup()
   lcd.setCursor(0, 0);
   lcd.print("COUNTDOWN: ");
 
-  while (IrReceiver.decodedIRData.command != IR_OK) // 0x1C is OK button
+  while (IrReceiver.decodedIRData.decodedRawData != IR_OK) // 0x1C is OK button
   {
     if (IrReceiver.decode())
     {
-      ir_result = IrReceiver.decodedIRData.command;
-      ir_result = ir_input_mapping(ir_result);
+      ir_result_raw = IrReceiver.decodedIRData.decodedRawData;
+      ir_result = ir_input_mapping(ir_result_raw);
 
       if (ir_result < 0)
         continue;
@@ -285,8 +286,8 @@ void idle_mode_loop()
   {
     if (IrReceiver.decode())
     {
-      ir_result = IrReceiver.decodedIRData.command;
-      ir_result = ir_input_mapping(ir_result);
+      ir_result_raw = IrReceiver.decodedIRData.decodedRawData;
+      ir_result = ir_input_mapping(ir_result_raw);
       DEBUG_PRINTLN(ir_result);
 
       beep_short(1);
@@ -355,8 +356,8 @@ void dom_mode_loop()
     {
       if (IrReceiver.decode())
       {
-        ir_result = IrReceiver.decodedIRData.command;
-        ir_result = ir_input_mapping(ir_result);
+        ir_result_raw = IrReceiver.decodedIRData.decodedRawData;
+        ir_result = ir_input_mapping(ir_result_raw);
         DEBUG_PRINTLN(ir_result);
 
         beep_short(1);
@@ -479,8 +480,8 @@ void exp_mode_loop()
     {
       if (IrReceiver.decode())
       {
-        ir_result = IrReceiver.decodedIRData.command;
-        ir_result = ir_input_mapping(ir_result);
+        ir_result_raw = IrReceiver.decodedIRData.decodedRawData;
+        ir_result = ir_input_mapping(ir_result_raw);
         DEBUG_PRINTLN(ir_result);
 
         beep_short(1);
@@ -691,9 +692,9 @@ void TimingISR()
   {
     sensing_time += 500;
 
-    if (mfrc522.uid.uidByte[3] == ALPHA1 || mfrc522.uid.uidByte[3] == ALPHA2 || mfrc522.uid.uidByte[3] == MOUNT1)
+    if (mfrc522.uid.uidByte[3] == MOUNT1 || mfrc522.uid.uidByte[3] == MOUNT2)
       alpha_sensing_time++;
-    else if (mfrc522.uid.uidByte[3] == BRAVO1 || mfrc522.uid.uidByte[3] == BRAVO2 || mfrc522.uid.uidByte[3] == MOUNT2)
+    else if (mfrc522.uid.uidByte[3] == BRAVO1 || mfrc522.uid.uidByte[3] == BRAVO2)
       bravo_sensing_time++;
   }
 
@@ -854,9 +855,12 @@ void beep_long(int duration)
   delay(100);
 }
 
-int ir_input_mapping(int input)
+int ir_input_mapping(uint32_t input)
 {
   int i;
+  DEBUG_PRINTHEX(input, HEX);
+  DEBUG_PRINTLN();
+  
   if (input == IR_OK)
     return IR_OK_MAPPED;
   for (i = 0; i < 10; i++)
