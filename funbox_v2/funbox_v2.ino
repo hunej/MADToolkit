@@ -22,8 +22,10 @@
 
 #define MP3_VOL 30
 
-//#define DEBUG
+//#define MILSIG
 
+
+//#define DEBUG
 #ifdef DEBUG
 #define DEBUG_PRINT(x) Serial.print(x)
 #define DEBUG_PRINTHEX(x, y) Serial.print(x, y)
@@ -186,8 +188,12 @@ void setup()
   DEBUG_PRINTLN(F("DFPlayer Mini online."));
 
   myDFPlayer.volume(MP3_VOL); // Set volume value. From 0 to 30
+
+#ifdef MILSIG
   myDFPlayer.play(MP3_START);
   delay(MP3_START_LENGTH);
+#endif
+  
   beep_short(3);
 
   // IR
