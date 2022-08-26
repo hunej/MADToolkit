@@ -1,6 +1,6 @@
 //https://sites.google.com/view/rayarduino/touch-sensor
 
-int touchSensor = 12;    //觸摸感測器 SIG 連接 Arduino pin 12
+int touchSensor = 3;    //觸摸感測器 SIG 連接 Arduino pin 12
 int sensorValue = 0;     //設定觸摸感測器感測值為 sensorValue
 
 void setup() {
