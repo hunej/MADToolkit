@@ -6,15 +6,12 @@
 
 // Define
 #define BUZZER_TIMER_PIN 7
-#define BUZZER_VIOLATION_PIN 8
+#define BUZZER_VIOLATION_PIN 2
 
-#define echoPinAlpha 9
-#define trigPinAlpha 10
-#define echoPinBravo 11
-#define trigPinBravo 12
+#define PinAlpha 9
+#define PinBravo 11
 
-#define onTouchThr 400
-
+#define PinSwitch 4
 
 
 #define DEBUG
@@ -50,7 +47,7 @@ long duration;
 int beeptoggle = 0;
 bool onTouchAlpha = false;
 bool onTouchBravo = false;
-
+bool onTouchSwitch = false;
   
 
 void setup() {
@@ -77,11 +74,13 @@ void setup() {
   beep_short(3, BUZZER_VIOLATION_PIN);
 
 
-  //SR04
-  pinMode(trigPinAlpha, OUTPUT);
-  pinMode(echoPinAlpha, INPUT);  
-  pinMode(trigPinBravo, OUTPUT);
-  pinMode(echoPinBravo, INPUT);   
+  //touch
+  pinMode(PinAlpha, INPUT);
+  pinMode(PinBravo, INPUT);
+
+  //switch
+  pinMode(PinSwitch, INPUT);
+  
 
   // ISR
   Timer1.initialize(500000); // 0.5s
@@ -108,46 +107,32 @@ void loop() {
 
 
 
-  digitalWrite(trigPinAlpha, LOW);
-  delayMicroseconds(5);
-  digitalWrite(trigPinAlpha, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPinAlpha, LOW);
-
-  pinMode(echoPinAlpha, INPUT);
-  duration = pulseIn(echoPinAlpha, HIGH);
-
-  if(duration<=onTouchThr)
+  if(digitalRead(PinAlpha)==HIGH)
   {
     onTouchAlpha = true;
-    DEBUG_PRINT("alpha in! ");
+    DEBUG_PRINTLN("alpha on!");
   }
   else
-  {
-    DEBUG_PRINT("alpha out! ");
     onTouchAlpha = false;
-  }
-
-    
-  DEBUG_PRINT(duration);
-  DEBUG_PRINT(", ");
-
-  digitalWrite(trigPinBravo, LOW);
-  delayMicroseconds(5);
-  digitalWrite(trigPinBravo, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPinBravo, LOW);
-
-  pinMode(echoPinBravo, INPUT);
-  duration = pulseIn(echoPinBravo, HIGH);
-
-  if(duration<=onTouchThr)
+  
+  if(digitalRead(PinBravo)==HIGH)
+  {
     onTouchBravo = true;
+    DEBUG_PRINTLN("bravo on!");
+  }
   else
     onTouchBravo = false;
 
-    
-  DEBUG_PRINTLN(duration);
+  if(digitalRead(PinSwitch)==LOW)
+  {
+    onTouchSwitch = true;
+    DEBUG_PRINTLN("switch on!");
+  }
+  else
+    onTouchSwitch = false;
+
+  
+  delay(100);
 }
 
 
@@ -166,7 +151,7 @@ void TimingISR()
     bravo_sensing_time++;
   }  
 
-  if (!(onTouchAlpha || onTouchBravo))
+  if (!(onTouchAlpha || onTouchBravo) && onTouchSwitch)
   {
     digitalWrite(BUZZER_VIOLATION_PIN, HIGH);
   }
