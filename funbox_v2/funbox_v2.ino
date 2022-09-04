@@ -162,7 +162,7 @@ void setup()
   lcd.print("Milsig Taiwan");
   delay(1000);
   lcd.setCursor(0, 1);
-  lcd.print("MADSDK");
+  lcd.print("MADToolkit");
   delay(1000);
 
   // Buzzer
