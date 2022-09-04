@@ -14,7 +14,7 @@
 #define PinSwitch 4
 
 
-#define DEBUG
+//#define DEBUG
 
 #ifdef DEBUG
 #define DEBUG_PRINT(x) Serial.print(x)
@@ -62,7 +62,7 @@ void setup() {
   lcd.print("Milsig Taiwan");
   delay(1000);
   lcd.setCursor(0, 1);
-  lcd.print("MADSDK");
+  lcd.print("MADToolkit");
   delay(1000);
 
 
