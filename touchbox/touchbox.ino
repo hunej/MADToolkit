@@ -35,6 +35,8 @@ void beep_short(int count, int pin);
 // Global variables
 LiquidCrystal_I2C lcd(0x27, 2, 1, 0, 4, 5, 6, 7, 3, POSITIVE); // LCD
 
+int countdown = 0;
+bool isEND = false;
 int second = 20;
 int minute = 0;
 int halfsecond = 2;
@@ -62,7 +64,7 @@ void setup() {
   lcd.print("Milsig Taiwan");
   delay(1000);
   lcd.setCursor(0, 1);
-  lcd.print("MADToolkit");
+  lcd.print("TouchBox");
   delay(1000);
 
 
@@ -85,27 +87,46 @@ void setup() {
   // ISR
   Timer1.initialize(500000); // 0.5s
   Timer1.attachInterrupt(TimingISR);  
+
+
+  pinMode(A0, INPUT_PULLUP);//selector1
+  pinMode(A1, INPUT_PULLUP);//selector2
+
+  if (digitalRead(A0)==1 && digitalRead(A1)==1)//5min
+    countdown = 300;
+  else if (digitalRead(A0)==0 && digitalRead(A1)==1)//7min
+    countdown = 420;
+  else if (digitalRead(A0)==1 && digitalRead(A1)==0)//10min
+    countdown = 600;
+  else
+    countdown = 720;
+    
 }
 
 void loop() {
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("ALPHA: ");
+  lcd.print("A:");
   lcd.print(alpha_sensing_time / 2);
   if (alpha_sensing_time % 2)
     lcd.print(".5s");
   else
     lcd.print(".0s");
 
-  lcd.setCursor(0, 1);
-  lcd.print("BRAVO: ");
+  
+  lcd.print(" B:");
   lcd.print(bravo_sensing_time / 2);
   if (bravo_sensing_time % 2)
     lcd.print(".5s");
   else
     lcd.print(".0s");
 
+  lcd.setCursor(0, 1);
+  lcd.print("COUNTDOWN: ");
+  lcd.print(countdown);
+  lcd.print("s");
 
+  
 
   if(digitalRead(PinAlpha)==HIGH)
   {
@@ -133,12 +154,25 @@ void loop() {
 
   
   delay(100);
+
+
+  if(countdown<=0)
+  {
+    isEND = true;
+    digitalWrite(BUZZER_VIOLATION_PIN, LOW);
+    digitalWrite(BUZZER_TIMER_PIN, LOW);
+    lcd.setCursor(0, 1);
+    lcd.print("STOP!");
+
+    while(1);  
+  }
 }
 
 
 void TimingISR()
 { // 0.5s
-
+  if(isEND)
+    return;
 
   halfsecond--;
   if (onTouchAlpha)
@@ -174,6 +208,7 @@ void TimingISR()
   if (halfsecond == 0)
   {
     halfsecond = 2;
+    countdown--;
   }
   
 }
