@@ -188,7 +188,7 @@ void setup()
   
   // Buzzer
   pinMode(BUZZER_PIN, OUTPUT); // BUZZER
-  //beep_short(3);
+  beep_short(3);
 
 
 
@@ -245,12 +245,12 @@ void setup()
 
   lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("WAIT KEY UNLOCK");
-  
-  while (digitalRead(KEY_PIN)==1)
-  {
-    
-  }
+//  lcd.print("WAIT KEY UNLOCK");
+//  
+//  while (digitalRead(KEY_PIN)==1)
+//  {
+//    
+//  }
   lcd.clear();
   
   delay(1000);
@@ -347,7 +347,7 @@ void dom_mode_loop()
     
     lcd.setCursor(0, 1);
     lcd.print("WAIT KEY RESET");
-    while (digitalRead(KEY_PIN)==0)
+    while (1)
     {
       
     }
@@ -447,7 +447,7 @@ void exp_mode_loop()
 
     lcd.setCursor(0, 1);
     lcd.print("WAIT KEY RESET");
-    while (digitalRead(KEY_PIN)==0)
+    while (1)
     {
       
     }
